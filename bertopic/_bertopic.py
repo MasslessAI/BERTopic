@@ -1687,7 +1687,9 @@ class BERTopic:
         cleaned_documents = [doc.replace("\n", " ") for doc in cleaned_documents]
         cleaned_documents = [doc.replace("\t", " ") for doc in cleaned_documents]
         if self.language == "english":
-            cleaned_documents = [re.sub(r'[^A-Za-z0-9 ]+', '', doc) for doc in cleaned_documents]
+            # keep underscore for phrases
+            # keep hyphen for phrases like all-season tire
+            cleaned_documents = [re.sub(r'[^-_A-Za-z0-9 ]+', '', doc) for doc in cleaned_documents]
         cleaned_documents = [doc if doc != "" else "emptydoc" for doc in cleaned_documents]
         return cleaned_documents
 

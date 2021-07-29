@@ -1279,8 +1279,7 @@ class BERTopic:
         """
         if isinstance(documents, str):
             documents = [documents]
-
-        print('extracting embediing...', self.embedding_model)
+            
         if method == "word":
             embeddings = self.embedding_model.embed_words(documents, verbose)
         elif method == "document":

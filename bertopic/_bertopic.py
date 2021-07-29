@@ -76,6 +76,7 @@ class BERTopic:
                  umap_model: UMAP = None,
                  hdbscan_model: hdbscan.HDBSCAN = None,
                  vectorizer_model: CountVectorizer = None,
+                 preprocess_text: Any = None,
                  verbose: bool = False,
                  ):
         """BERTopic initialization
@@ -160,6 +161,8 @@ class BERTopic:
         self.mapped_topics = None
         self.topic_embeddings = None
         self.topic_sim_matrix = None
+
+        self.preprocess_text = preprocess_text
 
         if verbose:
             logger.set_level("DEBUG")
@@ -459,7 +462,7 @@ class BERTopic:
 
             # Calculate c-TF-IDF representation for a specific timestamp
             selection = documents.loc[documents.Timestamps == timestamp, :]
-            documents_per_topic = selection.groupby(['Topic'], as_index=False).agg({'Document': ' '.join,
+            documents_per_topic = selection.groupby(['Topic'], as_index=False).agg({'Document': '\t'.join,
                                                                                     "Timestamps": "count"})
             c_tf_idf, words = self._c_tf_idf(documents_per_topic, m=len(selection), fit=False)
 
@@ -552,7 +555,7 @@ class BERTopic:
 
             # Calculate c-TF-IDF representation for a specific timestamp
             selection = documents.loc[documents.Class == class_, :]
-            documents_per_topic = selection.groupby(['Topic'], as_index=False).agg({'Document': ' '.join,
+            documents_per_topic = selection.groupby(['Topic'], as_index=False).agg({'Document': '\t'.join,
                                                                                     "Class": "count"})
             c_tf_idf, words = self._c_tf_idf(documents_per_topic, m=len(selection), fit=False)
 
@@ -1277,6 +1280,7 @@ class BERTopic:
         if isinstance(documents, str):
             documents = [documents]
 
+        print('extracting embediing...', self.embedding_model)
         if method == "word":
             embeddings = self.embedding_model.embed_words(documents, verbose)
         elif method == "document":
@@ -1356,7 +1360,7 @@ class BERTopic:
         Returns:
             c_tf_idf: The resulting matrix giving a value (importance score) for each word per topic
         """
-        documents_per_topic = documents.groupby(['Topic'], as_index=False).agg({'Document': ' '.join})
+        documents_per_topic = documents.groupby(['Topic'], as_index=False).agg({'Document': '\t'.join})
         self.c_tf_idf, words = self._c_tf_idf(documents_per_topic, m=len(documents))
         self.topics = self._extract_words_per_topic(words)
         self._create_topic_vectors()
@@ -1683,15 +1687,18 @@ class BERTopic:
             * Replace \n and \t with whitespace
             * Only keep alpha-numerical characters
         """
-        cleaned_documents = [doc.lower() for doc in documents]
-        cleaned_documents = [doc.replace("\n", " ") for doc in cleaned_documents]
-        cleaned_documents = [doc.replace("\t", " ") for doc in cleaned_documents]
-        if self.language == "english":
-            # keep underscore for phrases
-            # keep hyphen for phrases like all-season tire
-            cleaned_documents = [re.sub(r'[^-_A-Za-z0-9 ]+', '', doc) for doc in cleaned_documents]
-        cleaned_documents = [doc if doc != "" else "emptydoc" for doc in cleaned_documents]
-        return cleaned_documents
+        if self.preprocess_text:
+            return self.preprocess_text(documents)
+        else:
+            cleaned_documents = [doc.lower() for doc in documents]
+            cleaned_documents = [doc.replace("\n", " ") for doc in cleaned_documents]
+            cleaned_documents = [doc.replace("\t", " ") for doc in cleaned_documents]
+            if self.language == "english":
+                # keep underscore for phrases
+                # keep hyphen for phrases like all-season tire
+                cleaned_documents = [re.sub(r'[^-_A-Za-z0-9 ]+', '', doc) for doc in cleaned_documents]
+            cleaned_documents = [doc if doc != "" else "emptydoc" for doc in cleaned_documents]
+            return cleaned_documents
 
     @classmethod
     def _get_param_names(cls):

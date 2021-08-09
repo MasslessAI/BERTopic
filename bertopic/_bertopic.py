@@ -28,7 +28,7 @@ from bertopic import plotting
 # Visualization
 import plotly.graph_objects as go
 
-logger = MyLogger("WARNING")
+logger = MyLogger("INFO")
 
 
 class BERTopic:
@@ -1589,6 +1589,11 @@ class BERTopic:
         else:
             embeddings = self.c_tf_idf
         norm_data = normalize(embeddings, norm='l2')
+
+        if len(norm_data) <= 2: 
+            logger.info('Topic size <= 2, skip topic reduction.')
+            return documents
+
         predictions = hdbscan.HDBSCAN(min_cluster_size=2,
                                       metric='euclidean',
                                       cluster_selection_method='eom',
